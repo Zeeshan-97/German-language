@@ -1,0 +1,192 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);}
+.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:1rem 0 .8rem;}
+.top h2{font-size:16px;font-weight:600;color:var(--color-text-primary);}
+.count{font-size:12px;color:var(--color-text-tertiary);padding:3px 10px;border-radius:20px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;}
+.filt{padding:6px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;font-size:12.5px;transition:all .15s;}
+.filt.active{font-weight:500;}
+.filt[data-cat="all"].active{background:#E6F1FB;color:#0C447C;border-color:#378ADD;}
+.filt[data-cat="kunde"].active{background:#EAF3DE;color:#27500A;border-color:#5BAD6F;}
+.filt[data-cat="kasse"].active{background:#FAEEDA;color:#633806;border-color:#E89E3B;}
+.filt[data-cat="lager"].active{background:#FAECE7;color:#712B13;border-color:#D85A30;}
+.filt[data-cat="kommunikation"].active{background:#EEEDFE;color:#3C3489;border-color:#7B6FDB;}
+.filt[data-cat="problem"].active{background:#FBE9F0;color:#7A1034;border-color:#D45888;}
+.filt[data-cat="produkt"].active{background:#E2F5F4;color:#0E4C49;border-color:#3AAEAA;}
+
+.search-box{width:100%;padding:9px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:14px;font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);margin-bottom:12px;}
+.search-box:focus{outline:none;border-color:var(--color-border-info);}
+
+.verb-grid{display:flex;flex-direction:column;gap:0;}
+.verb-row{display:grid;grid-template-columns:2fr 1.5fr 2.5fr;gap:8px;padding:10px 8px;border-bottom:0.5px solid var(--color-border-tertiary);align-items:start;cursor:pointer;border-radius:4px;transition:background .1s;}
+.verb-row:hover{background:var(--color-background-secondary);}
+.verb-row.expanded{background:var(--color-background-secondary);}
+.vde{font-size:13.5px;font-weight:500;color:var(--color-text-primary);}
+.vconj{font-size:11px;color:var(--color-text-tertiary);display:block;margin-top:2px;}
+.vur{font-size:13px;color:var(--color-text-secondary);}
+.cat-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;flex-shrink:0;}
+.veg{font-size:12.5px;color:#185FA5;font-style:italic;}
+.expand-section{grid-column:1/-1;display:none;padding:8px 10px;background:var(--color-background-primary);border-radius:var(--border-radius-md);margin-top:4px;margin-bottom:4px;}
+.verb-row.expanded .expand-section{display:block;}
+.expand-de{font-size:13.5px;color:#185FA5;font-style:italic;margin-bottom:4px;}
+.expand-ur{font-size:12.5px;color:var(--color-text-secondary);}
+.no-result{text-align:center;padding:2rem;color:var(--color-text-tertiary);font-size:14px;}
+.header-row{display:grid;grid-template-columns:2fr 1.5fr 2.5fr;gap:8px;padding:6px 8px;border-bottom:1px solid var(--color-border-secondary);margin-bottom:2px;}
+.header-row span{font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;}
+</style>
+
+<div class="top">
+  <h2>50 Verkäufer Verben</h2>
+  <span class="count" id="countBadge">50 / 50 verbs</span>
+</div>
+
+<div class="filter-row">
+  <div class="filt active" data-cat="all" onclick="filterCat('all',this)">🔘 Sab</div>
+  <div class="filt" data-cat="kunde" onclick="filterCat('kunde',this)">🟢 Kunde</div>
+  <div class="filt" data-cat="kasse" onclick="filterCat('kasse',this)">🟠 Kasse/Zahlung</div>
+  <div class="filt" data-cat="lager" onclick="filterCat('lager',this)">🔴 Lager</div>
+  <div class="filt" data-cat="kommunikation" onclick="filterCat('kommunikation',this)">🟣 Kommunikation</div>
+  <div class="filt" data-cat="problem" onclick="filterCat('problem',this)">🩷 Problem lösen</div>
+  <div class="filt" data-cat="produkt" onclick="filterCat('produkt',this)">🩵 Produkt</div>
+</div>
+
+<input class="search-box" type="text" id="searchBox" placeholder="🔍 Verb dhundho... (z.B. zahlen, kaufen)" oninput="filterSearch()">
+
+<div class="header-row">
+  <span>Verb + Konjugation</span>
+  <span>اردو مطلب</span>
+  <span>Beispielsatz</span>
+</div>
+
+<div class="verb-grid" id="verbGrid"></div>
+
+<script>
+const CAT_COLORS = {
+  kunde:'#5BAD6F', kasse:'#E89E3B', lager:'#D85A30',
+  kommunikation:'#7B6FDB', problem:'#D45888', produkt:'#3AAEAA'
+};
+
+const VERBS = [
+  // KUNDE
+  {de:"begrüßen",conj:"ich begrüße / er begrüßt",ur:"خوش آمدید کہنا / استقبال کرنا",eg:"Ich begrüße den Kunden herzlich.",cat:"kunde"},
+  {de:"verabschieden",conj:"ich verabschiede",ur:"الوداع کہنا / رخصت کرنا",eg:"Ich verabschiede den Kunden freundlich.",cat:"kunde"},
+  {de:"bedienen",conj:"ich bediene / er bedient",ur:"خدمت کرنا / serve کرنا",eg:"Ich bediene den nächsten Kunden.",cat:"kunde"},
+  {de:"ansprechen",conj:"ich spreche an / er spricht an",ur:"بات شروع کرنا / مخاطب کرنا",eg:"Darf ich Sie kurz ansprechen?",cat:"kunde"},
+  {de:"begleiten",conj:"ich begleite",ur:"ساتھ جانا / guide کرنا",eg:"Ich begleite Sie zur Kasse.",cat:"kunde"},
+  {de:"einladen",conj:"ich lade ein / er lädt ein",ur:"دعوت دینا / invite کرنا",eg:"Wir laden Sie zu unserer Aktion ein.",cat:"kunde"},
+  {de:"willkommen heißen",conj:"ich heiße willkommen",ur:"خوش آمدید کہنا",eg:"Wir heißen Sie herzlich willkommen.",cat:"kunde"},
+  {de:"betreuen",conj:"ich betreue / er betreut",ur:"دیکھ بھال کرنا / care کرنا",eg:"Ich betreue unsere Stammkunden.",cat:"kunde"},
+  {de:"begleiten",conj:"ich begleite",ur:"ساتھ لے جانا",eg:"Ich begleite Sie zu den Umkleidekabinen.",cat:"kunde"},
+  {de:"warten lassen",conj:"ich lasse warten",ur:"انتظار کرانا",eg:"Bitte warten Sie kurz — ich bin sofort da.",cat:"kunde"},
+
+  // KASSE / ZAHLUNG
+  {de:"abrechnen",conj:"ich rechne ab",ur:"حساب کرنا / settle کرنا",eg:"Ich rechne die Kasse ab.",cat:"kasse"},
+  {de:"buchen",conj:"ich buche / er bucht",ur:"درج کرنا / book کرنا",eg:"Ich buche den Betrag im System.",cat:"kasse"},
+  {de:"scannen",conj:"ich scanne / er scannt",ur:"scan کرنا",eg:"Ich scanne den Barcode.",cat:"kasse"},
+  {de:"wechseln (Geld)",conj:"ich wechsle",ur:"پیسے بدلنا / change دینا",eg:"Können Sie mir 50 Euro wechseln?",cat:"kasse"},
+  {de:"erstatten",conj:"ich erstatte",ur:"واپس کرنا / refund کرنا",eg:"Wir erstatten Ihnen den vollen Betrag.",cat:"kasse"},
+  {de:"quittieren",conj:"ich quittiere",ur:"receipt دینا / تصدیق کرنا",eg:"Ich quittiere den Kauf für Sie.",cat:"kasse"},
+  {de:"abbuchen",conj:"ich buche ab",ur:"کاٹنا / deduct کرنا",eg:"Der Betrag wird automatisch abgebucht.",cat:"kasse"},
+  {de:"überweisen",conj:"ich überweise",ur:"transfer کرنا / بھیجنا",eg:"Sie können auch überweisen.",cat:"kasse"},
+
+  // LAGER
+  {de:"lagern",conj:"ich lagere / er lagert",ur:"store کرنا / رکھنا",eg:"Wir lagern die Ware im Keller.",cat:"lager"},
+  {de:"einräumen",conj:"ich räume ein",ur:"رکھنا / shelf پر لگانا",eg:"Ich räume die neuen Waren ein.",cat:"lager"},
+  {de:"ausräumen",conj:"ich räume aus",ur:"خالی کرنا / نکالنا",eg:"Ich räume das alte Regal aus.",cat:"lager"},
+  {de:"sortieren",conj:"ich sortiere",ur:"ترتیب دینا / sort کرنا",eg:"Ich sortiere die Produkte nach Größe.",cat:"lager"},
+  {de:"inventarisieren",conj:"ich inventarisiere",ur:"inventory لینا / گننا",eg:"Wir inventarisieren jeden Monat.",cat:"lager"},
+  {de:"zählen",conj:"ich zähle / er zählt",ur:"گننا / count کرنا",eg:"Ich zähle den Warenbestand.",cat:"lager"},
+  {de:"transportieren",conj:"ich transportiere",ur:"لانا لے جانا / transport کرنا",eg:"Ich transportiere die Kisten ins Lager.",cat:"lager"},
+  {de:"beschriften",conj:"ich beschrifte",ur:"label لگانا / لکھنا",eg:"Ich beschrifte alle Regale.",cat:"lager"},
+  {de:"entfernen",conj:"ich entferne",ur:"ہٹانا / remove کرنا",eg:"Ich entferne die alten Preisschilder.",cat:"lager"},
+  {de:"liefern",conj:"ich liefere",ur:"پہنچانا / deliver کرنا",eg:"Die Ware wird morgen geliefert.",cat:"lager"},
+
+  // KOMMUNIKATION
+  {de:"informieren",conj:"ich informiere",ur:"بتانا / آگاہ کرنا",eg:"Ich informiere den Kunden über das Angebot.",cat:"kommunikation"},
+  {de:"nachfragen",conj:"ich frage nach",ur:"دوبارہ پوچھنا / confirm کرنا",eg:"Darf ich kurz nachfragen?",cat:"kommunikation"},
+  {de:"bestätigen",conj:"ich bestätige",ur:"تصدیق کرنا / confirm کرنا",eg:"Ich bestätige Ihre Bestellung.",cat:"kommunikation"},
+  {de:"mitteilen",conj:"ich teile mit",ur:"بتانا / اطلاع دینا",eg:"Ich teile Ihnen den Preis mit.",cat:"kommunikation"},
+  {de:"sich vorstellen",conj:"ich stelle mich vor",ur:"اپنا تعارف کرانا",eg:"Darf ich mich kurz vorstellen?",cat:"kommunikation"},
+  {de:"versprechen",conj:"ich verspreche",ur:"وعدہ کرنا",eg:"Ich verspreche, das zu erledigen.",cat:"kommunikation"},
+  {de:"danken",conj:"ich danke / er dankt",ur:"شکریہ ادا کرنا",eg:"Ich danke Ihnen für Ihren Einkauf.",cat:"kommunikation"},
+  {de:"bitten",conj:"ich bitte / er bittet",ur:"گزارش کرنا / مانگنا",eg:"Ich bitte Sie kurz um Geduld.",cat:"kommunikation"},
+  {de:"hinweisen",conj:"ich weise hin",ur:"توجہ دلانا / بتانا",eg:"Darf ich Sie auf unser Angebot hinweisen?",cat:"kommunikation"},
+  {de:"reagieren",conj:"ich reagiere",ur:"جواب دینا / react کرنا",eg:"Ich reagiere ruhig auf Kritik.",cat:"kommunikation"},
+
+  // PROBLEM LÖSEN
+  {de:"entschuldigen",conj:"ich entschuldige mich",ur:"معافی مانگنا",eg:"Ich entschuldige mich für die Unannehmlichkeiten.",cat:"problem"},
+  {de:"kümmern",conj:"ich kümmere mich",ur:"خیال رکھنا / دھیان دینا",eg:"Ich kümmere mich sofort darum.",cat:"problem"},
+  {de:"weiterleiten",conj:"ich leite weiter",ur:"آگے بھیجنا / refer کرنا",eg:"Ich leite Sie an meinen Vorgesetzten weiter.",cat:"problem"},
+  {de:"klären",conj:"ich kläre / er klärt",ur:"واضح کرنا / clear کرنا",eg:"Ich kläre das sofort für Sie.",cat:"problem"},
+  {de:"kompensieren",conj:"ich kompensiere",ur:"تلافی کرنا / compensate کرنا",eg:"Wir kompensieren den Schaden.",cat:"problem"},
+  {de:"prüfen",conj:"ich prüfe / er prüft",ur:"جانچنا / check کرنا",eg:"Ich prüfe das in unserem System.",cat:"problem"},
+  {de:"nachschauen",conj:"ich schaue nach",ur:"دیکھنا / چیک کرنا",eg:"Ich schaue kurz im Lager nach.",cat:"problem"},
+
+  // PRODUKT
+  {de:"präsentieren",conj:"ich präsentiere",ur:"پیش کرنا / دکھانا",eg:"Ich präsentiere Ihnen unser neues Sortiment.",cat:"produkt"},
+  {de:"ausprobieren",conj:"ich probiere aus",ur:"آزمانا / try کرنا",eg:"Sie können das gerne ausprobieren.",cat:"produkt"},
+  {de:"beschreiben",conj:"ich beschreibe",ur:"بیان کرنا / describe کرنا",eg:"Ich beschreibe die Eigenschaften des Produkts.",cat:"produkt"},
+  {de:"auswählen",conj:"ich wähle aus",ur:"چننا / select کرنا",eg:"Darf ich etwas Passendes für Sie auswählen?",cat:"produkt"},
+  {de:"testen",conj:"ich teste / er testet",ur:"test کرنا / آزمانا",eg:"Wir haben das Produkt selbst getestet.",cat:"produkt"},
+  {de:"vorführen",conj:"ich führe vor",ur:"مظاہرہ کرنا / demo دینا",eg:"Darf ich Ihnen das kurz vorführen?",cat:"produkt"},
+];
+
+let currentCat = 'all';
+let currentSearch = '';
+
+function getCatColor(cat){ return CAT_COLORS[cat] || '#888'; }
+
+function render(){
+  const grid = document.getElementById('verbGrid');
+  let filtered = VERBS.filter(v => {
+    const matchCat = currentCat === 'all' || v.cat === currentCat;
+    const q = currentSearch.toLowerCase();
+    const matchSearch = !q || v.de.toLowerCase().includes(q) || v.ur.includes(q) || v.eg.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
+  document.getElementById('countBadge').textContent = `${filtered.length} / 50 verbs`;
+
+  if(!filtered.length){
+    grid.innerHTML = '<div class="no-result">Koi verb nahi mila 🔍</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map((v,i) => `
+    <div class="verb-row" onclick="toggleRow(this)">
+      <div>
+        <span class="vde">
+          <span class="cat-dot" style="background:${getCatColor(v.cat)}"></span>${v.de}
+        </span>
+        <span class="vconj">${v.conj}</span>
+      </div>
+      <div class="vur">${v.ur}</div>
+      <div class="veg">${v.eg}</div>
+      <div class="expand-section">
+        <div class="expand-de">📌 ${v.eg}</div>
+        <div class="expand-ur">مطلب: ${v.ur}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCat(cat, el){
+  currentCat = cat;
+  document.querySelectorAll('.filt').forEach(f=>f.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function filterSearch(){
+  currentSearch = document.getElementById('searchBox').value;
+  render();
+}
+
+function toggleRow(row){
+  row.classList.toggle('expanded');
+}
+
+render();
+</script>
